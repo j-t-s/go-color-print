@@ -50,24 +50,29 @@ func avgColor(left, top, right, bottom int, img image.Image) (uint32, uint32, ui
 	return rSum / count, gSum / count, bSum / count, aSum / count
 }
 
+func getBounds(winSize WinSize, imgRect image.Rectangle) (int, int, int, int) {
+	winRow := int(winSize.Row) - 1
+	winCol := int(winSize.Col / 2) // 2 Columns is one pixel
+
+	imgRow := imgRect.Max.Y - imgRect.Min.Y
+	imgCol := imgRect.Max.X - imgRect.Min.X
+
+	if imgRow < winRow {
+		winRow = imgRow
+	}
+
+	if imgCol < winCol {
+		winCol = imgCol
+	}
+
+	return winRow, winCol, imgRow, imgCol
+}
+
 func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
 	out := make(chan string)
 	go (func(winSize WinSize, img image.Image, out chan string) {
-		winRow := int(winSize.Row) - 1
-		winCol := int(winSize.Col / 2) // 2 Columns is one pixel
-
 		imgRect := img.Bounds()
-
-		imgRow := imgRect.Max.Y - imgRect.Min.Y
-		imgCol := imgRect.Max.X - imgRect.Min.X
-
-		if imgRow < winRow {
-			winRow = imgRow
-		}
-
-		if imgCol < winCol {
-			winCol = imgCol
-		}
+		winRow, winCol, imgRow, imgCol := getBounds(winSize, imgRect)
 
 		var winScaleNum, winScaleDen int
 		if (winCol * imgRow / imgCol) < winRow {
@@ -111,11 +116,13 @@ func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
 					out <- fmt.Sprint(getColor(convColor(r), convColor(g), convColor(b)))
 				} else {
 					// Support Alpha by simply printing two empty spaces if alpha is detected over threshold
-					out <- fmt.Sprintf("%v  ", NC)
+					// out <- fmt.Sprintf("%v  ", NC)
+					out <- fmt.Sprintf("\033[%vC", 2)
 				}
 			}
 			out <- fmt.Sprintf("%v\n", NC)
 		}
+		out <- fmt.Sprintf("\033[%vA", winRow)
 		close(out)
 	})(winSize, img, out)
 	return out
@@ -183,4 +190,7 @@ func main() {
 		}
 		time.Sleep(time.Duration(delay[i]) * 10 * time.Millisecond)
 	}
+	imgRect := imgs[len(imgs)-1].Bounds()
+	winRow, _, _, _ := getBounds(winSize, imgRect)
+	fmt.Printf("\033[%vB", winRow)
 }

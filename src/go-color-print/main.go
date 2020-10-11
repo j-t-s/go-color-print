@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"image"
+	"io"
 	"log"
 	"os"
 	"strings"
+	"time"
 	// _ "code.google.com/p/vp8-go/webp"
-	_ "image/gif"
+	gif "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 )
@@ -140,21 +142,43 @@ func main() {
 	if errFile != nil {
 		log.Fatal(errFile)
 	}
-	img, _, err := image.Decode(file)
+	fileImg, format, err := image.Decode(file)
 	if err != nil {
 		log.Fatal(err)
 	}
+	imgs := []image.Image{fileImg}
 
-	colorCodes := getAnsiEscapeCodes(winSize, img)
-	if *stream {
-		for colorCode := range colorCodes {
-			fmt.Print(colorCode)
+	delay := []int{0}
+
+	if format == "gif" {
+		file.Seek(0, io.SeekStart)         // Seek to the beginning of the file
+		gif, gifErr := gif.DecodeAll(file) // Decode the whole gif
+		if gifErr != nil {
+			log.Fatal(gifErr)
 		}
-	} else {
-		var strBuilder strings.Builder
-		for colorCode := range colorCodes {
-			strBuilder.WriteString(colorCode)
+		gifImg := gif.Image
+		delay = gif.Delay // Get the delays
+
+		imgs = imgs[1:] // Get rid of the first image
+		// Get the gif frames to render
+		for _, frame := range gifImg {
+			imgs = append(imgs, frame) // *image.Paletted implements image.Image, so this is all good
 		}
-		fmt.Print(strBuilder.String())
+	}
+
+	for i, img := range imgs {
+		colorCodes := getAnsiEscapeCodes(winSize, img)
+		if *stream {
+			for colorCode := range colorCodes {
+				fmt.Print(colorCode)
+			}
+		} else {
+			var strBuilder strings.Builder
+			for colorCode := range colorCodes {
+				strBuilder.WriteString(colorCode)
+			}
+			fmt.Print(strBuilder.String())
+		}
+		time.Sleep(time.Duration(delay[i]) * 10 * time.Millisecond)
 	}
 }

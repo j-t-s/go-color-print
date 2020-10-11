@@ -6,6 +6,7 @@ import (
 	"image"
 	"log"
 	"os"
+	"strings"
 	// _ "code.google.com/p/vp8-go/webp"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -111,7 +112,7 @@ func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
 					r, g, b, a = img.At(newX, newY).RGBA() // Use only one color
 				}
 				if a != 0 {
-					out <- fmt.Sprint(getColor(convColor(r), convColor(g), convColor(b))) // TODO: Give option to build string fully then print
+					out <- fmt.Sprint(getColor(convColor(r), convColor(g), convColor(b)))
 				} else {
 					// Support Alpha by simply printing two empty spaces if alpha is detected over threshold
 					out <- fmt.Sprintf("%v  ", NC)
@@ -127,6 +128,7 @@ func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
 // Flags
 var filePath = flag.String("file", "../../res/j-t-s.png", "The filename including its path")
 var averageSampling = flag.Bool("averageSampling", true, "Sample the image when scaling down by getting the average color. If false, only one pixel of the larger image corresponds to a pixel printed out")
+var stream = flag.Bool("stream", true, "Streams pixels to stdout as the image is being processed. If false, the ansi escape codes are generated first then printed to stdout")
 
 func main() {
 	// Get the flags
@@ -145,7 +147,15 @@ func main() {
 	}
 
 	colorCodes := getAnsiEscapeCodes(winSize, img)
-	for colorCode := range colorCodes {
-		fmt.Print(colorCode)
+	if *stream {
+		for colorCode := range colorCodes {
+			fmt.Print(colorCode)
+		}
+	} else {
+		var strBuilder strings.Builder
+		for colorCode := range colorCodes {
+			strBuilder.WriteString(colorCode)
+		}
+		fmt.Print(strBuilder.String())
 	}
 }

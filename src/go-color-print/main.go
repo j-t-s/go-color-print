@@ -117,9 +117,14 @@ func main() {
 				break
 			}
 
-			r, g, b, _ := avgColor(newX, newY, newX2, newY2, img) // Use average color
-			// r, g, b, _ = img.At(newX, newY).RGBA() // Use only one color
-			fmt.Print(getColor(convColor(r), convColor(g), convColor(b))) // TODO: Give option to build string fully then print
+			r, g, b, a := avgColor(newX, newY, newX2, newY2, img) // Use average color
+			// r, g, b, _ = img.At(newX, newY).RGBA() // Use only one color // TODO: add a flag for this
+			if a != 0 {
+				fmt.Print(getColor(convColor(r), convColor(g), convColor(b))) // TODO: Give option to build string fully then print
+			} else {
+				// Support Alpha by simply printing two empty spaces if alpha is detected over threshold
+				fmt.Printf("%v  ", NC)
+			}
 		}
 		fmt.Printf("%v\n", NC)
 	}

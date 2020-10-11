@@ -100,10 +100,12 @@ func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
 				}
 
 				var r, g, b, a uint32
-				if *averageSampling {
-					r, g, b, a = avgColor(newX, newY, newX2, newY2, img) // Use average color
-				} else {
-					r, g, b, a = img.At(newX, newY).RGBA() // Use only one color
+				if !(imgRect.Max.Y < newY || imgRect.Min.Y > newY || imgRect.Max.X < newX || imgRect.Min.X > newX || imgRect.Max.Y < newY2 || imgRect.Max.X < newX2) {
+					if *averageSampling {
+						r, g, b, a = avgColor(newX, newY, newX2, newY2, img) // Use average color
+					} else {
+						r, g, b, a = img.At(newX, newY).RGBA() // Use only one color
+					}
 				}
 				if a != 0 {
 					out <- fmt.Sprint(getColor(convColor(r), convColor(g), convColor(b)))

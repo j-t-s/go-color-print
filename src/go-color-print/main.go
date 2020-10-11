@@ -62,6 +62,14 @@ func main() {
 	log.Printf("Y Row: %v\n", imgRow)
 	log.Printf("X Col: %v\n", imgCol)
 
+	if imgRow < winRow {
+		winRow = imgRow
+	}
+
+	if imgCol < winCol {
+		winCol = imgCol
+	}
+
 	var winScaleNum, winScaleDen int
 	if (winCol * imgRow / imgCol) < winRow {
 		// Use winCol as scale

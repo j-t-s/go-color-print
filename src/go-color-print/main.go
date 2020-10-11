@@ -1,11 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	"log"
 	"os"
-	"flag"
 	// _ "code.google.com/p/vp8-go/webp"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -32,10 +32,14 @@ func convColor(i uint32) uint {
 	return (uint)(i >> 8)
 }
 
+// Flags
 var filePath = flag.String("file", "../../res/j-t-s.png", "The filename including its path")
+var averageSampling = flag.Bool("averageSampling", true, "Sample the image when scaling down by getting the average color. If false, only one pixel of the larger image corresponds to a pixel printed out")
 
 func main() {
+	// Get the flags
 	flag.Parse()
+	// Get the windowSize // TODO: this should be controlled by a flag
 	winSize := getWinSize()
 
 	file, errFile := os.Open(*filePath)
@@ -117,8 +121,12 @@ func main() {
 				break
 			}
 
-			r, g, b, a := avgColor(newX, newY, newX2, newY2, img) // Use average color
-			// r, g, b, _ = img.At(newX, newY).RGBA() // Use only one color // TODO: add a flag for this
+			var r, g, b, a uint32
+			if *averageSampling {
+				r, g, b, a = avgColor(newX, newY, newX2, newY2, img) // Use average color
+			} else {
+				r, g, b, a = img.At(newX, newY).RGBA() // Use only one color
+			}
 			if a != 0 {
 				fmt.Print(getColor(convColor(r), convColor(g), convColor(b))) // TODO: Give option to build string fully then print
 			} else {

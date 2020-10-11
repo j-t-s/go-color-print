@@ -77,7 +77,6 @@ func main() {
 		for y := top; y < bottom; y++ {
 			for x := left; x < right; x++ {
 				r, g, b, a := img.At(x, y).RGBA()
-				// fmt.Printf("(%v, %v) %v %v %v ", x, y, r, g, b)
 				rSum += r
 				gSum += g
 				bSum += b
@@ -85,8 +84,6 @@ func main() {
 				count++
 			}
 		}
-		// fmt.Println(rSum, gSum, bSum, aSum)
-		// fmt.Println(left, top, right, bottom, count)
 		return rSum / count, gSum / count, bSum / count, aSum / count
 	}
 
@@ -109,44 +106,10 @@ func main() {
 				break
 			}
 
-			// fmt.Printf("(%v, %v) -> (%v, %v)", x * winScaleDen / winScaleNum, y * winScaleDen / winScaleNum,  (x + 1) * winScaleDen / winScaleNum, (y + 1) * winScaleDen / winScaleNum)
-			// fmt.Printf("(%v, %v) (%v, %v)", x, y,  x * winScaleDen / winScaleNum, y * winScaleDen / winScaleNum)
-			// fmt.Printf("(%v, %v)", x, y)
-			// fmt.Print("xx")
 			r, g, b, _ := avgColor(newX, newY, newX2, newY2, img) // Use average color
 			// r, g, b, _ = img.At(newX, newY).RGBA() // Use only one color
 			fmt.Print(getColor(convColor(r), convColor(g), convColor(b))) // TODO: Give option to build string fully then print
 		}
 		fmt.Printf("%v\n", NC)
 	}
-
-	return
-	colorChan := make(chan colorValue)
-	go sendColors(img, colorChan)
-	for i := range colorChan {
-		if !i.newLine {
-			fmt.Print(getColor(i.r, i.g, i.b))
-		} else {
-			fmt.Printf("%v\n", NC)
-		}
-		// log.Printf("%v\n", i)
-	}
-}
-
-func sendColors(img image.Image, colorChan chan colorValue) {
-	bd := img.Bounds()
-	for y := bd.Min.Y; y < bd.Max.Y; y++ {
-		for x := bd.Min.X; x < bd.Max.X; x++ {
-			if y < bd.Min.Y || x < bd.Min.X {
-				log.Println("Empty")
-			} else {
-				r, g, b, a := img.At(x, y).RGBA()
-				colorChan <- colorValue{convColor(r), convColor(g), convColor(b), convColor(a), false}
-				if x == bd.Max.X-1 {
-					colorChan <- colorValue{newLine: true}
-				}
-			}
-		}
-	}
-	close(colorChan)
 }

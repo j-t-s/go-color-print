@@ -5,6 +5,7 @@ import (
 	"image"
 	"log"
 	"os"
+	"flag"
 	// _ "code.google.com/p/vp8-go/webp"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -31,11 +32,13 @@ func convColor(i uint32) uint {
 	return (uint)(i >> 8)
 }
 
-func main() {
+var filePath = flag.String("file", "../../res/j-t-s.png", "The filename including its path")
 
+func main() {
+	flag.Parse()
 	winSize := getWinSize()
 
-	file, errFile := os.Open("../../res/j-t-s.png") // TODO: Make an arg for this
+	file, errFile := os.Open(*filePath)
 	defer file.Close()
 	if errFile != nil {
 		log.Fatal(errFile)

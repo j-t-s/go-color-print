@@ -32,6 +32,98 @@ func convColor(i uint32) uint {
 	return (uint)(i >> 8)
 }
 
+func avgColor(left, top, right, bottom int, img image.Image) (uint32, uint32, uint32, uint32) {
+	var rSum, gSum, bSum, aSum, count uint32
+	for y := top; y < bottom; y++ {
+		for x := left; x < right; x++ {
+			r, g, b, a := img.At(x, y).RGBA()
+			rSum += r
+			gSum += g
+			bSum += b
+			aSum += a
+			count++
+		}
+	}
+	return rSum / count, gSum / count, bSum / count, aSum / count
+}
+
+func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
+	out := make(chan string)
+	go (func(winSize WinSize, img image.Image, out chan string) {
+		winRow := int(winSize.Row) - 1
+		winCol := int(winSize.Col / 2) // 2 Columns is one pixel
+
+		imgRect := img.Bounds()
+
+		imgRow := imgRect.Max.Y - imgRect.Min.Y
+		imgCol := imgRect.Max.X - imgRect.Min.X
+
+		log.Printf("Row: %v\n", winRow)
+		log.Printf("Col: %v\n", winCol)
+
+		log.Printf("Y Row: %v\n", imgRow)
+		log.Printf("X Col: %v\n", imgCol)
+
+		if imgRow < winRow {
+			winRow = imgRow
+		}
+
+		if imgCol < winCol {
+			winCol = imgCol
+		}
+
+		var winScaleNum, winScaleDen int
+		if (winCol * imgRow / imgCol) < winRow {
+			// Use winCol as scale
+			winScaleNum = winCol
+			winScaleDen = imgCol
+		} else {
+			// Use winRow as scale
+			winScaleNum = winRow
+			winScaleDen = imgRow
+		}
+
+		log.Println(winScaleNum, winScaleDen)
+
+		for y := 0; y < winRow; y++ {
+			newY := y * winScaleDen / winScaleNum
+			newY2 := (y + 1) * winScaleDen / winScaleNum
+			if newY2 > imgRow {
+				newY2 = imgRow
+			}
+			if newY >= imgRow {
+				break
+			}
+			for x := 0; x < winCol; x++ {
+				newX := x * winScaleDen / winScaleNum
+				newX2 := (x + 1) * winScaleDen / winScaleNum
+				if newX2 > imgCol {
+					newX2 = imgCol
+				}
+				if newX >= imgCol {
+					break
+				}
+
+				var r, g, b, a uint32
+				if *averageSampling {
+					r, g, b, a = avgColor(newX, newY, newX2, newY2, img) // Use average color
+				} else {
+					r, g, b, a = img.At(newX, newY).RGBA() // Use only one color
+				}
+				if a != 0 {
+					out <- fmt.Sprint(getColor(convColor(r), convColor(g), convColor(b))) // TODO: Give option to build string fully then print
+				} else {
+					// Support Alpha by simply printing two empty spaces if alpha is detected over threshold
+					out <- fmt.Sprintf("%v  ", NC)
+				}
+			}
+			out <- fmt.Sprintf("%v\n", NC)
+		}
+		close(out)
+	})(winSize, img, out)
+	return out
+}
+
 // Flags
 var filePath = flag.String("file", "../../res/j-t-s.png", "The filename including its path")
 var averageSampling = flag.Bool("averageSampling", true, "Sample the image when scaling down by getting the average color. If false, only one pixel of the larger image corresponds to a pixel printed out")
@@ -52,88 +144,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	winRow := int(winSize.Row) - 1
-	winCol := int(winSize.Col / 2) // 2 Columns is one pixel
-
-	imgRect := img.Bounds()
-
-	imgRow := imgRect.Max.Y - imgRect.Min.Y
-	imgCol := imgRect.Max.X - imgRect.Min.X
-
-	log.Printf("Row: %v\n", winRow)
-	log.Printf("Col: %v\n", winCol)
-
-	log.Printf("Y Row: %v\n", imgRow)
-	log.Printf("X Col: %v\n", imgCol)
-
-	if imgRow < winRow {
-		winRow = imgRow
-	}
-
-	if imgCol < winCol {
-		winCol = imgCol
-	}
-
-	var winScaleNum, winScaleDen int
-	if (winCol * imgRow / imgCol) < winRow {
-		// Use winCol as scale
-		winScaleNum = winCol
-		winScaleDen = imgCol
-	} else {
-		// Use winRow as scale
-		winScaleNum = winRow
-		winScaleDen = imgRow
-	}
-
-	log.Println(winScaleNum, winScaleDen)
-
-	avgColor := func(left, top, right, bottom int, img image.Image) (uint32, uint32, uint32, uint32) {
-		var rSum, gSum, bSum, aSum, count uint32
-		for y := top; y < bottom; y++ {
-			for x := left; x < right; x++ {
-				r, g, b, a := img.At(x, y).RGBA()
-				rSum += r
-				gSum += g
-				bSum += b
-				aSum += a
-				count++
-			}
-		}
-		return rSum / count, gSum / count, bSum / count, aSum / count
-	}
-
-	for y := 0; y < winRow; y++ {
-		newY := y * winScaleDen / winScaleNum
-		newY2 := (y + 1) * winScaleDen / winScaleNum
-		if newY2 > imgRow {
-			newY2 = imgRow
-		}
-		if newY >= imgRow {
-			break
-		}
-		for x := 0; x < winCol; x++ {
-			newX := x * winScaleDen / winScaleNum
-			newX2 := (x + 1) * winScaleDen / winScaleNum
-			if newX2 > imgCol {
-				newX2 = imgCol
-			}
-			if newX >= imgCol {
-				break
-			}
-
-			var r, g, b, a uint32
-			if *averageSampling {
-				r, g, b, a = avgColor(newX, newY, newX2, newY2, img) // Use average color
-			} else {
-				r, g, b, a = img.At(newX, newY).RGBA() // Use only one color
-			}
-			if a != 0 {
-				fmt.Print(getColor(convColor(r), convColor(g), convColor(b))) // TODO: Give option to build string fully then print
-			} else {
-				// Support Alpha by simply printing two empty spaces if alpha is detected over threshold
-				fmt.Printf("%v  ", NC)
-			}
-		}
-		fmt.Printf("%v\n", NC)
+	colorCodes := getAnsiEscapeCodes(winSize, img)
+	for colorCode := range colorCodes {
+		fmt.Print(colorCode)
 	}
 }

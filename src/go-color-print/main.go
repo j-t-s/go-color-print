@@ -59,12 +59,6 @@ func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
 		imgRow := imgRect.Max.Y - imgRect.Min.Y
 		imgCol := imgRect.Max.X - imgRect.Min.X
 
-		log.Printf("Row: %v\n", winRow)
-		log.Printf("Col: %v\n", winCol)
-
-		log.Printf("Y Row: %v\n", imgRow)
-		log.Printf("X Col: %v\n", imgCol)
-
 		if imgRow < winRow {
 			winRow = imgRow
 		}
@@ -83,8 +77,6 @@ func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
 			winScaleNum = winRow
 			winScaleDen = imgRow
 		}
-
-		log.Println(winScaleNum, winScaleDen)
 
 		for y := 0; y < winRow; y++ {
 			newY := y * winScaleDen / winScaleNum

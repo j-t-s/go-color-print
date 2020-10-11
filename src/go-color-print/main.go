@@ -129,12 +129,19 @@ func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
 var filePath = flag.String("file", "../../res/j-t-s.png", "The filename including its path")
 var averageSampling = flag.Bool("averageSampling", true, "Sample the image when scaling down by getting the average color. If false, only one pixel of the larger image corresponds to a pixel printed out")
 var stream = flag.Bool("stream", true, "Streams pixels to stdout as the image is being processed. If false, the ansi escape codes are generated first then printed to stdout")
+var width = flag.Int("width", 20, "The pixel width of the outputted images")
+var autoSize = flag.Bool("autoSize", true, "Automatically determine width and height based on the terminal")
 
 func main() {
 	// Get the flags
 	flag.Parse()
-	// Get the windowSize // TODO: this should be controlled by a flag
-	winSize := getWinSize()
+	// Get the windowSize
+	var winSize WinSize
+	if *autoSize {
+		winSize = getWinSize()
+	} else {
+		winSize = WinSize{(1 << 16) - 1, uint16(*width) * 2, 0, 0}
+	}
 
 	file, errFile := os.Open(*filePath)
 	defer file.Close()

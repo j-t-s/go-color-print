@@ -54,8 +54,8 @@ func getBounds(winSize WinSize, imgRect image.Rectangle) (int, int, int, int) {
 	winRow := int(winSize.Row) - 1
 	winCol := int(winSize.Col / 2) // 2 Columns is one pixel
 
-	imgRow := imgRect.Max.Y - imgRect.Min.Y
-	imgCol := imgRect.Max.X - imgRect.Min.X
+	imgRow := imgRect.Max.Y
+	imgCol := imgRect.Max.X
 
 	if imgRow < winRow {
 		winRow = imgRow
@@ -68,11 +68,11 @@ func getBounds(winSize WinSize, imgRect image.Rectangle) (int, int, int, int) {
 	return winRow, winCol, imgRow, imgCol
 }
 
-func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
+func getAnsiEscapeCodes(winSize WinSize, imgSize image.Rectangle, img image.Image) chan string {
 	out := make(chan string)
-	go (func(winSize WinSize, img image.Image, out chan string) {
+	go (func(winSize WinSize, imgSize image.Rectangle, img image.Image, out chan string) {
 		imgRect := img.Bounds()
-		winRow, winCol, imgRow, imgCol := getBounds(winSize, imgRect)
+		winRow, winCol, imgRow, imgCol := getBounds(winSize, imgSize)
 
 		var winScaleNum, winScaleDen int
 		if (winCol * imgRow / imgCol) < winRow {
@@ -122,9 +122,9 @@ func getAnsiEscapeCodes(winSize WinSize, img image.Image) chan string {
 			}
 			out <- fmt.Sprintf("%v\n", NC)
 		}
-		out <- fmt.Sprintf("\033[%vA", winRow)
+		out <- fmt.Sprintf("\033[%vA", imgSize.Max.Y)
 		close(out)
-	})(winSize, img, out)
+	})(winSize, imgSize, img, out)
 	return out
 }
 
@@ -159,6 +159,8 @@ func main() {
 
 	delay := []int{0}
 
+	imgSize := image.Rectangle{ image.Point{0, 0}, image.Point{fileImg.Bounds().Max.X, fileImg.Bounds().Max.Y} }
+
 	if format == "gif" {
 		file.Seek(0, io.SeekStart)         // Seek to the beginning of the file
 		gif, gifErr := gif.DecodeAll(file) // Decode the whole gif
@@ -167,6 +169,9 @@ func main() {
 		}
 		gifImg := gif.Image
 		delay = gif.Delay // Get the delays
+		// Get the imgSize if applicable
+		gifConfig := gif.Config
+		imgSize = image.Rectangle{ image.Point{0, 0}, image.Point{ gifConfig.Width, gifConfig.Height }}
 
 		imgs = imgs[1:] // Get rid of the first image
 		// Get the gif frames to render
@@ -176,7 +181,7 @@ func main() {
 	}
 
 	for i, img := range imgs {
-		colorCodes := getAnsiEscapeCodes(winSize, img)
+		colorCodes := getAnsiEscapeCodes(winSize, imgSize, img)
 		if *stream {
 			for colorCode := range colorCodes {
 				fmt.Print(colorCode)
@@ -190,7 +195,6 @@ func main() {
 		}
 		time.Sleep(time.Duration(delay[i]) * 10 * time.Millisecond)
 	}
-	imgRect := imgs[len(imgs)-1].Bounds()
-	winRow, _, _, _ := getBounds(winSize, imgRect)
+	winRow, _, _, _ := getBounds(winSize, imgSize)
 	fmt.Printf("\033[%vB", winRow)
 }

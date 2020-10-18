@@ -177,6 +177,8 @@ func main() {
 
 		disposalMethod = gif.Disposal
 
+		// TODO: Support Gif Backgrounds.
+
 		imgs = imgs[1:] // Get rid of the first image
 		// Get the gif frames to render
 		for _, frame := range gifImg {
@@ -200,6 +202,7 @@ func main() {
 			fmt.Print(strBuilder.String())
 		}
 		time.Sleep(time.Duration(delay[i]) * 10 * time.Millisecond)
+		// TODO: Support Gif Backgrounds. DisposalBackground is not support yet.
 		if disposalMethod[i] == gif.DisposalPrevious || disposalMethod[i] == gif.DisposalBackground {
 			fmt.Printf("\033[%vB", winRow)
 		}

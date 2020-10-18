@@ -161,7 +161,7 @@ func main() {
 
 	disposalMethod := []byte{gif.DisposalNone}
 
-	imgSize := image.Rectangle{ image.Point{0, 0}, image.Point{fileImg.Bounds().Max.X, fileImg.Bounds().Max.Y} }
+	imgSize := image.Rectangle{image.Point{0, 0}, image.Point{fileImg.Bounds().Max.X, fileImg.Bounds().Max.Y}}
 
 	if format == "gif" {
 		file.Seek(0, io.SeekStart)         // Seek to the beginning of the file
@@ -173,7 +173,7 @@ func main() {
 		delay = gif.Delay // Get the delays
 		// Get the imgSize if applicable
 		gifConfig := gif.Config
-		imgSize = image.Rectangle{ image.Point{0, 0}, image.Point{ gifConfig.Width, gifConfig.Height }}
+		imgSize = image.Rectangle{image.Point{0, 0}, image.Point{gifConfig.Width, gifConfig.Height}}
 
 		disposalMethod = gif.Disposal
 

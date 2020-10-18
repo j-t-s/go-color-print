@@ -159,6 +159,8 @@ func main() {
 
 	delay := []int{0}
 
+	disposalMethod := []byte{gif.DisposalNone}
+
 	imgSize := image.Rectangle{ image.Point{0, 0}, image.Point{fileImg.Bounds().Max.X, fileImg.Bounds().Max.Y} }
 
 	if format == "gif" {
@@ -173,12 +175,16 @@ func main() {
 		gifConfig := gif.Config
 		imgSize = image.Rectangle{ image.Point{0, 0}, image.Point{ gifConfig.Width, gifConfig.Height }}
 
+		disposalMethod = gif.Disposal
+
 		imgs = imgs[1:] // Get rid of the first image
 		// Get the gif frames to render
 		for _, frame := range gifImg {
 			imgs = append(imgs, frame) // *image.Paletted implements image.Image, so this is all good
 		}
 	}
+
+	winRow, _, _, _ := getBounds(winSize, imgSize)
 
 	for i, img := range imgs {
 		colorCodes := getAnsiEscapeCodes(winSize, imgSize, img)
@@ -194,7 +200,9 @@ func main() {
 			fmt.Print(strBuilder.String())
 		}
 		time.Sleep(time.Duration(delay[i]) * 10 * time.Millisecond)
+		if disposalMethod[i] == gif.DisposalPrevious || disposalMethod[i] == gif.DisposalBackground {
+			fmt.Printf("\033[%vB", winRow)
+		}
 	}
-	winRow, _, _, _ := getBounds(winSize, imgSize)
 	fmt.Printf("\033[%vB", winRow)
 }

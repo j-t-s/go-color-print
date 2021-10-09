@@ -71,6 +71,46 @@ func getBounds(winSize WinSize, imgRect image.Rectangle) (int, int, int, int) {
 func getAnsiEscapeCodes(winSize WinSize, imgSize image.Rectangle, img image.Image) chan string {
 	out := make(chan string)
 	go (func(winSize WinSize, imgSize image.Rectangle, img image.Image, out chan string) {
+		for pix := range getPixelChan(winSize, imgSize, img) {
+			r := pix.Red
+			g := pix.Green
+			b := pix.Blue
+			a := pix.Alpha
+			n := pix.IsNewline
+			ior := pix.IsOriginReturn
+			or := pix.OriginReturn
+			if n {
+				out <- fmt.Sprintf("%v\n", NC)
+			} else if ior {
+				out <- fmt.Sprintf("\033[%vA", or)
+			} else {
+				if a != 0 {
+					out <- fmt.Sprint(getColor(convColor(r), convColor(g), convColor(b)))
+				} else {
+					// Support Alpha by simply printing two empty spaces if alpha is detected over threshold
+					// out <- fmt.Sprintf("%v  ", NC)
+					out <- fmt.Sprintf("\033[%vC", 2)
+				}
+			}
+		}
+		close(out)
+	})(winSize, imgSize, img, out)
+	return out
+}
+
+type Pixel struct {
+	Red uint32
+	Green uint32
+	Blue uint32
+	Alpha uint32
+	IsNewline bool
+	IsOriginReturn bool
+	OriginReturn int
+}
+
+func getPixelChan(winSize WinSize, imgSize image.Rectangle, img image.Image) chan Pixel {
+	out := make(chan Pixel)
+	go (func(winSize WinSize, imgSize image.Rectangle, img image.Image, out chan Pixel) {
 		imgRect := img.Bounds()
 		winRow, winCol, imgRow, imgCol := getBounds(winSize, imgSize)
 
@@ -112,17 +152,11 @@ func getAnsiEscapeCodes(winSize WinSize, imgSize image.Rectangle, img image.Imag
 						r, g, b, a = img.At(newX, newY).RGBA() // Use only one color
 					}
 				}
-				if a != 0 {
-					out <- fmt.Sprint(getColor(convColor(r), convColor(g), convColor(b)))
-				} else {
-					// Support Alpha by simply printing two empty spaces if alpha is detected over threshold
-					// out <- fmt.Sprintf("%v  ", NC)
-					out <- fmt.Sprintf("\033[%vC", 2)
-				}
+				out <- Pixel{r, g, b, a, false, false, 0}
 			}
-			out <- fmt.Sprintf("%v\n", NC)
+			out <- Pixel{0, 0, 0, 0, true, false, 0}
 		}
-		out <- fmt.Sprintf("\033[%vA", imgSize.Max.Y)
+		out <- Pixel{0, 0, 0, 0, false, true, imgSize.Max.Y}
 		close(out)
 	})(winSize, imgSize, img, out)
 	return out

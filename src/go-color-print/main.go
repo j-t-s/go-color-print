@@ -22,6 +22,19 @@ func getColor(r, g, b uint) string {
 	return fmt.Sprintf("\033[0;48;5;%vm  ", color)
 }
 
+func getColorCodeTop(rt, gt, bt, rb, gb, bb uint) string {
+	colorT := 16 + 36*convert256to6(rt) + 6*convert256to6(gt) + convert256to6(bt) // (0 ≤ r, g, b ≤ 5)
+	 colorB := 16 + 36*convert256to6(rb) + 6*convert256to6(gb) + convert256to6(bb) // (0 ≤ r, g, b ≤ 5)
+	return fmt.Sprintf("\033[38;5;%vm\033[48;5;%vm▀", colorT, colorB)
+}
+
+// TODO: To support transparency, would need to have 4 methods (really 3 if one of 2 is reused), i.e. empty, tfbb (top foreground, bottom background), tbbf (top fg, bottom bg), solid color.
+/*func getColorCodeBottom(rt, gt, bt, rb, gb, bb uint) string {
+	colorT := 16 + 36*convert256to6(rt) + 6*convert256to6(gt) + convert256to6(bt) // (0 ≤ r, g, b ≤ 5)
+	colorB := 16 + 36*convert256to6(rb) + 6*convert256to6(gb) + convert256to6(bb) // (0 ≤ r, g, b ≤ 5)
+	return fmt.Sprintf("\033[0;38;5;%vm\033[0;48;5;%vm▄", colorT, colorB)
+}*/
+
 func convert256to6(color uint) uint {
 	return color * 216 / (36 * 256)
 }
@@ -53,6 +66,10 @@ func avgColor(left, top, right, bottom int, img image.Image) (uint32, uint32, ui
 func getBounds(winSize WinSize, imgRect image.Rectangle) (int, int, int, int) {
 	winRow := int(winSize.Row) - 1
 	winCol := int(winSize.Col / 2) // 2 Columns is one pixel
+	if *smallBlocks {
+		winRow = (int(winSize.Row) - 1) * 2 // Small blocks have more room
+		winCol = int(winSize.Col * 2) // Small blocks have more room
+	}
 
 	imgRow := imgRect.Max.Y
 	imgCol := imgRect.Max.X
@@ -71,6 +88,9 @@ func getBounds(winSize WinSize, imgRect image.Rectangle) (int, int, int, int) {
 func getAnsiEscapeCodes(winSize WinSize, imgSize image.Rectangle, img image.Image) chan string {
 	out := make(chan string)
 	go (func(winSize WinSize, imgSize image.Rectangle, img image.Image, out chan string) {
+		pixBuf := make([]Pixel, 0, 20)
+		onFirstLine := true
+		activeColumn := 0
 		for pix := range getPixelChan(winSize, imgSize, img) {
 			r := pix.Red
 			g := pix.Green
@@ -79,17 +99,45 @@ func getAnsiEscapeCodes(winSize WinSize, imgSize image.Rectangle, img image.Imag
 			n := pix.IsNewline
 			ior := pix.IsOriginReturn
 			or := pix.OriginReturn
-			if n {
-				out <- fmt.Sprintf("%v\n", NC)
-			} else if ior {
-				out <- fmt.Sprintf("\033[%vA", or)
-			} else {
-				if a != 0 {
-					out <- fmt.Sprint(getColor(convColor(r), convColor(g), convColor(b)))
+			if !*smallBlocks {
+				if n {
+					out <- fmt.Sprintf("%v\n", NC)
+				} else if ior {
+					out <- fmt.Sprintf("\033[%vA", or)
 				} else {
-					// Support Alpha by simply printing two empty spaces if alpha is detected over threshold
-					// out <- fmt.Sprintf("%v  ", NC)
-					out <- fmt.Sprintf("\033[%vC", 2)
+					if a != 0 {
+						out <- fmt.Sprint(getColor(convColor(r), convColor(g), convColor(b)))
+					} else {
+						// Support Alpha by simply printing two empty spaces if alpha is detected over threshold
+						// out <- fmt.Sprintf("%v  ", NC)
+						out <- fmt.Sprintf("\033[%vC", 2)
+					}
+				}
+			} else {
+				if onFirstLine {
+					if n {
+						onFirstLine = false
+					} else if ior {
+						// We are actually not on the FirstLine at this point, since onFirstLine would be false when FirstLine is being finished.
+						// Thus onFirstLine would be true when SecondLine is being finished, so no buffer is needed.
+						out <- fmt.Sprintf("\033[%vA", or/2) // Origin Return is actually half since a character is two pixels high.
+					} else {
+						pixBuf = append(pixBuf, pix) // FirstLine needs buffered until we get to the second line
+					}
+				} else {
+					if n {
+						out <- fmt.Sprintf("%v\n", NC)
+						onFirstLine = true
+						pixBuf = nil // Clear the Buffer
+						activeColumn = 0
+					} else if ior {
+						// We are actually on the FirstLine at this point, since onFirstLine would be false when FirstLine is being finished.
+						// TODO: Just print out the buffer as top pixels
+					} else {
+						topPix := pixBuf[activeColumn]
+						activeColumn++
+						out <- getColorCodeTop(convColor(topPix.Red), convColor(topPix.Green), convColor(topPix.Blue), convColor(r), convColor(g), convColor(b))
+					}
 				}
 			}
 		}
@@ -165,6 +213,7 @@ func getPixelChan(winSize WinSize, imgSize image.Rectangle, img image.Image) cha
 // Flags
 var filePath = flag.String("file", "../../res/j-t-s.png", "The filename including its path")
 var averageSampling = flag.Bool("averageSampling", true, "Sample the image when scaling down by getting the average color. If false, only one pixel of the larger image corresponds to a pixel printed out")
+var smallBlocks = flag.Bool("smallBlocks", false, "Use two blocks in a character instead of two characters as a block. If true, transparency isn't supported.")
 var stream = flag.Bool("stream", true, "Streams pixels to stdout as the image is being processed. If false, the ansi escape codes are generated first then printed to stdout")
 var width = flag.Int("width", 20, "The pixel width of the outputted images")
 var autoSize = flag.Bool("autoSize", true, "Automatically determine width and height based on the terminal")

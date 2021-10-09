@@ -22,18 +22,20 @@ func getColor(r, g, b uint) string {
 	return fmt.Sprintf("\033[0;48;5;%vm  ", color)
 }
 
-func getColorCodeTop(rt, gt, bt, rb, gb, bb uint) string {
+func getColorCodeTop(rt, gt, bt, at, rb, gb, bb, ab uint) string {
+	if at == 0 && ab == 0 {
+		return fmt.Sprintf("\033[%vC", 1) // fmt.Sprintf("%v ", NC)
+	} else if at == 0 && ab != 0 {
+		colorB := 16 + 36*convert256to6(rb) + 6*convert256to6(gb) + convert256to6(bb) // (0 ≤ r, g, b ≤ 5)
+		return fmt.Sprintf("%v\033[38;5;%vm▄", NC, colorB)
+	} else if at != 0 && ab == 0 {
+		colorT := 16 + 36*convert256to6(rt) + 6*convert256to6(gt) + convert256to6(bt) // (0 ≤ r, g, b ≤ 5)
+		return fmt.Sprintf("%v\033[38;5;%vm▀", NC, colorT)
+	}
 	colorT := 16 + 36*convert256to6(rt) + 6*convert256to6(gt) + convert256to6(bt) // (0 ≤ r, g, b ≤ 5)
 	colorB := 16 + 36*convert256to6(rb) + 6*convert256to6(gb) + convert256to6(bb) // (0 ≤ r, g, b ≤ 5)
 	return fmt.Sprintf("\033[38;5;%vm\033[48;5;%vm▀", colorT, colorB)
 }
-
-// TODO: To support transparency, would need to have 4 methods (really 3 if one of 2 is reused), i.e. empty, tfbb (top foreground, bottom background), tbbf (top fg, bottom bg), solid color.
-/*func getColorCodeBottom(rt, gt, bt, rb, gb, bb uint) string {
-	colorT := 16 + 36*convert256to6(rt) + 6*convert256to6(gt) + convert256to6(bt) // (0 ≤ r, g, b ≤ 5)
-	colorB := 16 + 36*convert256to6(rb) + 6*convert256to6(gb) + convert256to6(bb) // (0 ≤ r, g, b ≤ 5)
-	return fmt.Sprintf("\033[0;38;5;%vm\033[0;48;5;%vm▄", colorT, colorB)
-}*/
 
 func convert256to6(color uint) uint {
 	return color * 216 / (36 * 256)
@@ -136,7 +138,7 @@ func getAnsiEscapeCodes(winSize WinSize, imgSize image.Rectangle, img image.Imag
 					} else {
 						topPix := pixBuf[activeColumn]
 						activeColumn++
-						out <- getColorCodeTop(convColor(topPix.Red), convColor(topPix.Green), convColor(topPix.Blue), convColor(r), convColor(g), convColor(b))
+						out <- getColorCodeTop(convColor(topPix.Red), convColor(topPix.Green), convColor(topPix.Blue), (uint)(topPix.Alpha), convColor(r), convColor(g), convColor(b), (uint)(a))
 					}
 				}
 			}
@@ -213,7 +215,7 @@ func getPixelChan(winSize WinSize, imgSize image.Rectangle, img image.Image) cha
 // Flags
 var filePath = flag.String("file", "../../res/j-t-s.png", "The filename including its path")
 var averageSampling = flag.Bool("averageSampling", true, "Sample the image when scaling down by getting the average color. If false, only one pixel of the larger image corresponds to a pixel printed out")
-var smallBlocks = flag.Bool("smallBlocks", false, "Use two blocks in a character instead of two characters as a block. If true, transparency isn't supported.")
+var smallBlocks = flag.Bool("smallBlocks", false, "Use two blocks in a character instead of two characters as a block. If true, transparency isn't supported very well for gifs that have stacking layers.")
 var stream = flag.Bool("stream", true, "Streams pixels to stdout as the image is being processed. If false, the ansi escape codes are generated first then printed to stdout")
 var width = flag.Int("width", 20, "The pixel width of the outputted images")
 var autoSize = flag.Bool("autoSize", true, "Automatically determine width and height based on the terminal")

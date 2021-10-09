@@ -24,7 +24,7 @@ func getColor(r, g, b uint) string {
 
 func getColorCodeTop(rt, gt, bt, rb, gb, bb uint) string {
 	colorT := 16 + 36*convert256to6(rt) + 6*convert256to6(gt) + convert256to6(bt) // (0 ≤ r, g, b ≤ 5)
-	 colorB := 16 + 36*convert256to6(rb) + 6*convert256to6(gb) + convert256to6(bb) // (0 ≤ r, g, b ≤ 5)
+	colorB := 16 + 36*convert256to6(rb) + 6*convert256to6(gb) + convert256to6(bb) // (0 ≤ r, g, b ≤ 5)
 	return fmt.Sprintf("\033[38;5;%vm\033[48;5;%vm▀", colorT, colorB)
 }
 
@@ -68,7 +68,7 @@ func getBounds(winSize WinSize, imgRect image.Rectangle) (int, int, int, int) {
 	winCol := int(winSize.Col / 2) // 2 Columns is one pixel
 	if *smallBlocks {
 		winRow = (int(winSize.Row) - 1) * 2 // Small blocks have more room
-		winCol = int(winSize.Col * 2) // Small blocks have more room
+		winCol = int(winSize.Col * 2)       // Small blocks have more room
 	}
 
 	imgRow := imgRect.Max.Y
@@ -147,13 +147,13 @@ func getAnsiEscapeCodes(winSize WinSize, imgSize image.Rectangle, img image.Imag
 }
 
 type Pixel struct {
-	Red uint32
-	Green uint32
-	Blue uint32
-	Alpha uint32
-	IsNewline bool
+	Red            uint32
+	Green          uint32
+	Blue           uint32
+	Alpha          uint32
+	IsNewline      bool
 	IsOriginReturn bool
-	OriginReturn int
+	OriginReturn   int
 }
 
 func getPixelChan(winSize WinSize, imgSize image.Rectangle, img image.Image) chan Pixel {

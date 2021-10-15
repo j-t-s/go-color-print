@@ -24,7 +24,7 @@ func getColor(r, g, b uint) string {
 
 func getColorCodeTop(rt, gt, bt, at, rb, gb, bb, ab uint) string {
 	if at == 0 && ab == 0 {
-		return fmt.Sprintf("\033[%vC", 1) // fmt.Sprintf("%v ", NC)
+		return fmt.Sprintf("\033[%vC", 1) // Move Cursor to show anything that was in the previous image
 	} else if at == 0 && ab != 0 {
 		colorB := 16 + 36*convert256to6(rb) + 6*convert256to6(gb) + convert256to6(bb) // (0 ≤ r, g, b ≤ 5)
 		return fmt.Sprintf("%v\033[38;5;%vm▄", NC, colorB)

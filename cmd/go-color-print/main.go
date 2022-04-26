@@ -213,7 +213,7 @@ func getPixelChan(winSize WinSize, imgSize image.Rectangle, img image.Image) cha
 }
 
 // Flags
-var filePath = flag.String("file", "../../res/j-t-s.png", "The filename including its path")
+var filePath = flag.String("file", "../../assets/j-t-s.png", "The filename including its path")
 var averageSampling = flag.Bool("averageSampling", true, "Sample the image when scaling down by getting the average color. If false, only one pixel of the larger image corresponds to a pixel printed out")
 var smallBlocks = flag.Bool("smallBlocks", false, "Use two blocks in a character instead of two characters as a block. If true, transparency isn't supported very well for gifs that have stacking layers.")
 var stream = flag.Bool("stream", true, "Streams pixels to stdout as the image is being processed. If false, the ansi escape codes are generated first then printed to stdout")
